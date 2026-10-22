@@ -1,10 +1,16 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using System.Security.Cryptography;
-
+using ServerApp;
+using System.Timers;
 
 class menu
 {
     static List<Bugs> bugs;
+    static List<Scans> scans;
+    static ObservableDictionary<string, Thread> ProgScans;
+
+    public event Action<string, Thread>? ProgScansChanged;
+
     public static void Main()
     {
         var builder = WebApplication.CreateBuilder();
@@ -14,8 +20,8 @@ class menu
             using StreamReader reader = new StreamReader(httpContext.Request.Body);
             string data = await reader.ReadToEndAsync();
             string desc = GetDesc(data);
-            string imp = GetImpontness(data);
-            string id = RandomNumberGenerator.GetHexString(8);
+            string imp = GetImportantness(data);
+            string id = CreateID(8);
             bugs.Add(new Bugs(id,DateTime.Now, desc,Convert.ToInt32(imp)));
             return id;
         });
@@ -23,12 +29,21 @@ class menu
         {
             using StreamReader reader = new StreamReader(httpContext.Request.Body);
             string ID = await reader.ReadToEndAsync();
-            Bugs result = bugs.Find(x => x.GetInfo(ID) != null);
+            Bugs result = bugs.Find(x => x.GetID()==ID);
             if (result != null)
             {
                 return result.AllData();
             }
             return "Данные не были найдены.";
+        });
+        app.MapPost("/scan", async (HttpContext httpContext) =>
+        {
+            using StreamReader reader = new StreamReader(httpContext.Request.Body);
+            string data = await reader.ReadToEndAsync();
+            string id = CreateID(12);
+            var temp = new Scans(id, data);
+            scans.Add(temp);
+            return id;
         });
         app.Run("http://localhost:2702");
     }
@@ -37,36 +52,39 @@ class menu
         string desc = text.Substring(0,text.IndexOf(";"));
         return desc;
     }
-    static string GetImpontness(string text)
+    static string GetImportantness(string text)
     {
         string tt = text.Substring(text.IndexOf(";"));
         return tt;
     }
+    static string CreateID(int count)
+    {
+        while (true) {
+            string id = RandomNumberGenerator.GetHexString(count);
+            if (bugs.Find(x => x.GetID() ==id) != null)
+            {
+                continue;
+            }
+            if (scans.Find(x => x.GetID()==id) != null)
+            {
+                continue;
+            }
+            return id;
+        }
+    }
+    static System.Timers.Timer CreateTimer(int secs)
+    {
+        System.Timers.Timer timer = new System.Timers.Timer(secs);
+        timer.Elapsed += OnTimeEvent;
+        timer.AutoReset = false;
+        timer.Enabled = true;
+        return timer;
+    }
+    private static void OnTimeEvent(Object source,ElapsedEventArgs e)
+    {
+        Scans.refreshScans();
+    }
 }
-class Bugs
-{
-    string ID;
-    DateTime date;
-    string info;
-    int Impontentness;
-    public Bugs(string iD, DateTime date, string info, int impontentness)
-    {
-        ID = iD;
-        this.date = date;
-        this.info = info;
-        Impontentness = impontentness;
-    }
-    public Bugs GetInfo(string id)
-    {
-        if (id == ID)
-            return this;
-        else
-            return null;
-    }
-    public string AllData()
-    {
-        return ID + ";"+info+";"+Impontentness+";"+date.Date.ToString();
-    }
-}
+
 
 
