@@ -22,7 +22,7 @@
         }
         public string AllData()
         {
-            return ID + ";" + info + ";" + Importantness + ";" + date.Date.ToString();
+            return "ID:"+ID + ";Info:" + info + ";Scale:" + Importantness + ";Date:" + date.Date.ToShortDateString();
         }
         public string GetID()
         {

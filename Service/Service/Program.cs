@@ -1,20 +1,23 @@
 ﻿using System;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
-using System.Net.Http;
+using static System.Formats.Asn1.AsnWriter;
 
+enum ChooseOption
+{
+    Exit,
+    Add,
+    GetInfo,
+    CodeScan,
+    GetScanStatus,
+    Unknown
+
+}
 class Service
 {
-    enum ChooseOption
-    {
-        Exit,
-        Add,
-        GetInfo,
-        CodeScan,
-        GetScanStatus,
-        Unknown
-
-    }
+    
+    public static HttpClient httpClient = new HttpClient();
     public static async Task Main()
     {
         Console.WriteLine("Добро пожаловать в сервис по управлению уязвимостями программного обеспечения.\nВыберите действие:\n");
@@ -38,16 +41,66 @@ class Service
                 Console.Clear();
                 Console.WriteLine("Была введена неизвестная команда. Попробуйте еще раз.");
                 answ = ChooseOption.Unknown;
-                await Task.Delay(3000);
+                await Task.Delay(4000);
                 Console.Clear();
                 continue;
             }
             switch(answ){
                 case ChooseOption.Add:
-                    Console.WriteLine("Временная заглушка");
-                    continue;
+                    {
+                        Console.Clear();
+                        Console.WriteLine("Какую запись вы хотите добавить? Опишите уязвимость");
+                        string desc = Console.ReadLine();
+                        string scale = "";
+                        while (true)
+                        {
+                            Console.WriteLine("Оцените важность данной уязвимости от 1 до 10");
+                            scale = Console.ReadLine();
+                            int temp;
+                            if (Int32.TryParse(scale, out temp) == false)
+                                Console.WriteLine("Оценка может быть выражена только числовым знаечнием от 1 до 10");
+                            else if (temp < 1 || temp > 10)
+                                Console.WriteLine("Оценка может быть выражена только числовым знаечнием от 1 до 10");
+                            else
+                                break;
+                        }
+                        StringContent content = new StringContent(desc +";"+ scale);
+                        using var response = await httpClient.PostAsync("https://localhost:2702/add", content);
+                        string responseText = await response.Content.ReadAsStringAsync();
+                        Console.Clear();
+                        Console.WriteLine("Ваша заявка записана. Её уникальный номер: "+responseText);
+                        continue;
+                    }
                 case ChooseOption.GetInfo:
-                    Console.WriteLine("Временная заглушка");
+                    Console.Clear();
+                    string id = "";
+                    int k = 0;
+                    while (k<3)
+                    {
+                        Console.WriteLine("Какую запись вы ищите? Необходимо ввести ее уникальный номер");
+                        id = Console.ReadLine();
+                        if (id.Length == 8)
+                            break;
+                        Console.WriteLine("Индефикатор заявки имеет строгую длину в 8 символов. Попробуйте еще раз");
+                        k++;
+                    }
+                    if (k < 3)
+                    {
+                        using var response = await httpClient.GetAsync($"https://localhost:2702/Info/{id}");
+                        string responseText = await response.Content.ReadAsStringAsync();
+                        Console.Clear();
+                        Console.WriteLine("Результат запроса:\n");
+                        int count = 1;
+                        while (responseText.Contains(";"))
+                        {
+                            int pos = responseText.IndexOf(";");
+                            Console.WriteLine(count+". "+(responseText.Substring(0,pos)));
+                            responseText=responseText.Remove(0, pos+1);
+                            count++;
+                        }
+                        Console.WriteLine(count + ". " +responseText);
+                        Console.WriteLine("\n");
+                    }
                     continue;
                 case ChooseOption.CodeScan:
                     Console.WriteLine("Временная заглушка");

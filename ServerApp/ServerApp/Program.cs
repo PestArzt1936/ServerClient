@@ -13,6 +13,8 @@ class menu
 
     public static void Main()
     {
+        bugs = new List<Bugs>();
+        scans = new List<Scans>();
         var builder = WebApplication.CreateBuilder();
         var app = builder.Build();
         app.MapPost("/add", async (HttpContext httpContext) =>
@@ -25,11 +27,9 @@ class menu
             bugs.Add(new Bugs(id,DateTime.Now, desc,Convert.ToInt32(imp)));
             return id;
         });
-        app.MapGet("/Info", async (HttpContext httpContext) =>
+        app.MapGet("/Info/{id}", async (string id) =>
         {
-            using StreamReader reader = new StreamReader(httpContext.Request.Body);
-            string ID = await reader.ReadToEndAsync();
-            Bugs result = bugs.Find(x => x.GetID()==ID);
+            Bugs result = bugs.Find(x => x.GetID() == id);
             if (result != null)
             {
                 return result.AllData();
@@ -45,7 +45,7 @@ class menu
             scans.Add(temp);
             return id;
         });
-        app.Run("http://localhost:2702");
+        app.Run("https://localhost:2702");
     }
     static string GetDesc(string text)
     {
@@ -54,21 +54,23 @@ class menu
     }
     static string GetImportantness(string text)
     {
-        string tt = text.Substring(text.IndexOf(";"));
+        string tt = text.Substring(text.IndexOf(";")+1);
         return tt;
     }
     static string CreateID(int count)
     {
         while (true) {
             string id = RandomNumberGenerator.GetHexString(count);
-            if (bugs.Find(x => x.GetID() ==id) != null)
-            {
-                continue;
-            }
-            if (scans.Find(x => x.GetID()==id) != null)
-            {
-                continue;
-            }
+            //if(bugs.Count>0)
+                if (bugs.Exists(x => x.GetID() ==id) == true)
+                {
+                    continue;
+                }
+            //if(scans.Count>0)
+                if (scans.Exists(x => x.GetID() == id) == true)
+                {
+                    continue;
+                }
             return id;
         }
     }
