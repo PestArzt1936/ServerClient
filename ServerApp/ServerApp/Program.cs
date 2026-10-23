@@ -110,7 +110,6 @@ class menu
                     logs.Add(new Logs("Запрос на отмену сканирования", id, "Отказ"));
                     callResult = "Отказ";
                 }
-                logs.Add(new Logs("Запрос на отмену сканирования", id, "Успешно"));
                 return "ID:"+id+";Date:"+sc.changed+";Result:"+callResult;
             }
             else
@@ -118,6 +117,14 @@ class menu
                 logs.Add(new Logs("Запрос на отмену сканирования", id, "Отказ"));
                 return "Данные о сканировании не были найдены.";
             }
+        });
+        app.MapPost("/ScanLimitChange", async (HttpContext httpContext) =>
+        {
+            using StreamReader reader = new StreamReader(httpContext.Request.Body);
+            string limit = await reader.ReadToEndAsync();
+            ProgScans.ChangeLimit(Convert.ToInt32(limit));
+            logs.Add(new Logs("Изменение лимита сканирвоания. Лимит:"+limit, "-", "Успешно"));
+            return "Лимит усмпешно изменен на "+limit+". Учтите, что измененный лимит не отменяет текущие сканирования";
         });
         app.Run("https://localhost:2702");
     }

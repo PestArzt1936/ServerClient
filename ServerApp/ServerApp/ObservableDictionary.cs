@@ -34,5 +34,9 @@
         {
             return dict[key];
         }
+        public void ChangeLimit(int limit)
+        {
+            Limit = limit;
+        }
     }
 }

@@ -12,6 +12,7 @@ enum ChooseOption
     CodeScan,
     GetScanStatus,
     CancelScan,
+    ChangeScanLimit,
     Unknown
     
 
@@ -26,12 +27,12 @@ class Service
         ChooseOption answ = ChooseOption.Unknown;
         while(answ != ChooseOption.Exit)
         {
-            Console.WriteLine("1.Добавить новую запись\n2.Получить информации о уязвимости\n3.Просканировать код\n4.Узнать статус сканирования кода\n5.Отменить сканирование кода\n0.Закрыть приложение.");
+            Console.WriteLine("1.Добавить новую запись\n2.Получить информации о уязвимости\n3.Просканировать код\n4.Узнать статус сканирования кода\n5.Отменить сканирование кода\n6.Изменить лимит сканирования\n0.Закрыть приложение.");
             
             try
             {
                 int temp = Convert.ToInt32(Console.ReadLine());
-                if (temp < 0 || temp > 5)
+                if (temp < 0 || temp > 6)
                 {
                     throw new Exception("Неизвестная команда");
                 }
@@ -47,7 +48,7 @@ class Service
                 Console.Clear();
                 continue;
             }
-            switch(answ){
+            switch (answ) {
                 case ChooseOption.Add:
                     {
                         Console.Clear();
@@ -66,18 +67,19 @@ class Service
                             else
                                 break;
                         }
-                        StringContent content = new StringContent(desc +";"+ scale);
+                        StringContent content = new StringContent(desc + ";" + scale);
                         using var response = await httpClient.PostAsync("https://localhost:2702/add", content);
                         string responseText = await response.Content.ReadAsStringAsync();
                         Console.Clear();
-                        Console.WriteLine("Ваша заявка записана. Её уникальный номер: "+responseText);
+                        Console.WriteLine("Ваша заявка записана. Её уникальный номер: " + responseText);
+                        Console.WriteLine("\n");
                         continue;
                     }
                 case ChooseOption.GetInfo:
                     Console.Clear();
                     string id = "";
                     int k = 0;
-                    while (k<3)
+                    while (k < 3)
                     {
                         Console.WriteLine("Какую запись вы ищите? Необходимо ввести ее уникальный номер");
                         id = Console.ReadLine();
@@ -96,11 +98,11 @@ class Service
                         while (responseText.Contains(";"))
                         {
                             int pos = responseText.IndexOf(";");
-                            Console.WriteLine(count+". "+(responseText.Substring(0,pos)));
-                            responseText=responseText.Remove(0, pos+1);
+                            Console.WriteLine(count + ". " + (responseText.Substring(0, pos)));
+                            responseText = responseText.Remove(0, pos + 1);
                             count++;
                         }
-                        Console.WriteLine(count + ". " +responseText);
+                        Console.WriteLine(count + ". " + responseText);
                         Console.WriteLine("\n");
                     }
                     continue;
@@ -113,11 +115,12 @@ class Service
                         using var response = await httpClient.PostAsync("https://localhost:2702/Scan", content);
                         string responseText = await response.Content.ReadAsStringAsync();
                         Console.Clear();
-                        if(responseText.Length==12)
+                        if (responseText.Length == 12)
                             Console.WriteLine("Сканирование начато. Её уникальный номер: " + responseText);
                         else
-                            Console.WriteLine("Результат: "+responseText);
-                            continue;
+                            Console.WriteLine("Результат: " + responseText);
+                        Console.WriteLine("\n");
+                        continue;
                     }
                 case ChooseOption.GetScanStatus:
                     Console.Clear();
@@ -182,6 +185,30 @@ class Service
                         Console.WriteLine("\n");
                     }
                     continue;
+                case ChooseOption.ChangeScanLimit:
+                    {
+                        Console.Clear();
+                            string scale;
+                        while (true)
+                        {
+                            Console.WriteLine("Вdедите новый лимит для одновременного сканирования кода.");
+                            scale = Console.ReadLine();
+                            int temp;
+                            if (Int32.TryParse(scale, out temp) == false)
+                                Console.WriteLine("Лимит может быть только числом от 1 до 100. Если хотите отключить лимит, введите -1");
+                            else if (temp < -1 || temp > 100||temp==0)
+                                Console.WriteLine("Лимит может быть только числом от 1 до 100. Если хотите отключить лимит, введите -1");
+                            else
+                                break;
+                        }
+                        StringContent content = new StringContent(scale);
+                        using var response = await httpClient.PostAsync("https://localhost:2702/ScanLimitChange", content);
+                        string responseText = await response.Content.ReadAsStringAsync();
+                        Console.Clear();
+                        Console.WriteLine("Результат запроса:\n"+responseText);
+                        Console.WriteLine("\n");
+                        continue;
+                    }
                 default:
                     continue;
             }
