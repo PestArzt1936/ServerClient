@@ -30,5 +30,9 @@
             dict.Remove(key);
             ItemRemoved?.Invoke(key);
         }
+        public N GetValue(T key)
+        {
+            return dict[key];
+        }
     }
 }

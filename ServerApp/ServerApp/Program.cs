@@ -10,7 +10,7 @@ class menu
     static List<Bugs> bugs;
     static List<Scans> scans;
     static ObservableDictionary<string, CancellationTokenSource> ProgScans;
-    static Queue<Scans> scansQueue;
+    static List<Scans> scansQueue;
     static List<Logs> logs;
 
     public event Action<string, Thread>? ProgScansChanged;
@@ -20,7 +20,7 @@ class menu
         bugs = new List<Bugs>();
         scans = new List<Scans>();
         ProgScans = new ObservableDictionary<string, CancellationTokenSource>(3);
-        scansQueue = new Queue<Scans>();
+        scansQueue = new List<Scans>();
         logs = new List<Logs>();
         ProgScans.ItemRemoved += OnScanRemove;
         var builder = WebApplication.CreateBuilder();
@@ -64,7 +64,7 @@ class menu
             {
                 temp.state = State.InQueue;
                 temp.Changed();
-                scansQueue.Enqueue(temp);
+                scansQueue.Add(temp);
             }
             logs.Add(new Logs($"Запрос на сканирование кода.", id, temp.state.ToString()));
             return id;
@@ -80,6 +80,45 @@ class menu
             logs.Add(new Logs("Получение информации по сканированию", id, "Отказ"));
             return "Данные не были найдены.";
         });
+        app.MapPost("/ScanCancel", async (HttpContext httpContext) =>
+        {
+            using StreamReader reader = new StreamReader(httpContext.Request.Body);
+            string id = await reader.ReadToEndAsync();
+            Scans sc = scans.Find(x=>x.GetID() == id);
+            if (sc != null)
+            {
+                string callResult = "";
+                if (sc.state == State.InQueue)
+                {
+                    sc.state = State.Canceled;
+                    sc.Changed();
+                    scansQueue.Remove(sc);
+                    logs.Add(new Logs("Запрос на отмену сканирования", id, "Успешно"));
+                    callResult = "Успешно";
+                }
+                else if(sc.state == State.InProgress)
+                {
+                    var CT=ProgScans.GetValue(id);
+                    CT.Cancel();
+                    ProgScans.Remove(id);
+                    logs.Add(new Logs("Запрос на отмену сканирования", id, "Успешно"));
+                    callResult = "Успешно";
+                    CT.Dispose();
+                }
+                else
+                {
+                    logs.Add(new Logs("Запрос на отмену сканирования", id, "Отказ"));
+                    callResult = "Отказ";
+                }
+                logs.Add(new Logs("Запрос на отмену сканирования", id, "Успешно"));
+                return "ID:"+id+";Date:"+sc.changed+";Result:"+callResult;
+            }
+            else
+            {
+                logs.Add(new Logs("Запрос на отмену сканирования", id, "Отказ"));
+                return "Данные о сканировании не были найдены.";
+            }
+        });
         app.Run("https://localhost:2702");
     }
 
@@ -88,7 +127,8 @@ class menu
         if (scansQueue.Count > 0)
         {
             CancellationTokenSource CT = new CancellationTokenSource();
-            Scans temp = scansQueue.Dequeue();
+            Scans temp = scansQueue[0];
+            scansQueue.RemoveAt(0);
             temp.state = State.InProgress;
             logs.Add(new Logs($"Изменение состояния сканирования", temp.GetID(), temp.state.ToString()));
             temp.Changed();
@@ -139,12 +179,17 @@ class menu
             lock (logs)
             {
                 logs.Add(new Logs($"Изменение состояния сканирования", scan.GetID(), scan.state.ToString()));
+                scan.state = State.Canceled;
+                scan.Changed();
             }
-            scan.state = State.Canceled;
+            Debug.Print($"Отмена сканирования. ID:{scan.GetID()}");
         }
         finally
         {
-            ProgScans.Remove(scan.GetID());
+            lock (ProgScans)
+            {
+                ProgScans.Remove(scan.GetID());
+            }
             ct.Dispose();
         }
     }

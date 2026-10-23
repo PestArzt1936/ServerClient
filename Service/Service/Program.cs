@@ -11,7 +11,9 @@ enum ChooseOption
     GetInfo,
     CodeScan,
     GetScanStatus,
+    CancelScan,
     Unknown
+    
 
 }
 class Service
@@ -24,12 +26,12 @@ class Service
         ChooseOption answ = ChooseOption.Unknown;
         while(answ != ChooseOption.Exit)
         {
-            Console.WriteLine("1.Добавить новую запись\n2.Получить информации о уязвимости\n3.Просканировать код\n4.Узнать статус сканирования кода\n0.Закрыть приложение.");
+            Console.WriteLine("1.Добавить новую запись\n2.Получить информации о уязвимости\n3.Просканировать код\n4.Узнать статус сканирования кода\n5.Отменить сканирование кода\n0.Закрыть приложение.");
             
             try
             {
                 int temp = Convert.ToInt32(Console.ReadLine());
-                if (temp < 0 || temp > 4)
+                if (temp < 0 || temp > 5)
                 {
                     throw new Exception("Неизвестная команда");
                 }
@@ -89,7 +91,7 @@ class Service
                         using var response = await httpClient.GetAsync($"https://localhost:2702/Info/{id}");
                         string responseText = await response.Content.ReadAsStringAsync();
                         Console.Clear();
-                        Console.WriteLine("Результат запроса:\n");
+                        Console.WriteLine("Результат запроса:");
                         int count = 1;
                         while (responseText.Contains(";"))
                         {
@@ -117,7 +119,6 @@ class Service
                             Console.WriteLine("Результат: "+responseText);
                             continue;
                     }
-                    continue;
                 case ChooseOption.GetScanStatus:
                     Console.Clear();
                     id = "";
@@ -136,7 +137,39 @@ class Service
                         using var response = await httpClient.GetAsync($"https://localhost:2702/ScanStatus/{id}");
                         string responseText = await response.Content.ReadAsStringAsync();
                         Console.Clear();
-                        Console.WriteLine("Результат запроса:\n");
+                        Console.WriteLine("Результат запроса:");
+                        int count = 1;
+                        while (responseText.Contains(";"))
+                        {
+                            int pos = responseText.IndexOf(";");
+                            Console.WriteLine(count + ". " + (responseText.Substring(0, pos)));
+                            responseText = responseText.Remove(0, pos + 1);
+                            count++;
+                        }
+                        Console.WriteLine(count + ". " + responseText);
+                        Console.WriteLine("\n");
+                    }
+                    continue;
+                case ChooseOption.CancelScan:
+                    Console.Clear();
+                    id = "";
+                    k = 0;
+                    while (k < 3)
+                    {
+                        Console.WriteLine("Какое сканирование вы хотите отменить? Необходимо ввести ее уникальный номер");
+                        id = Console.ReadLine();
+                        if (id.Length == 12)
+                            break;
+                        Console.WriteLine("Индефикатор сканирования имеет строгую длину в 12 символов. Попробуйте еще раз");
+                        k++;
+                    }
+                    if (k < 3)
+                    {
+                        StringContent content = new StringContent(id);
+                        using var response = await httpClient.PostAsync("https://localhost:2702/ScanCancel", content);
+                        string responseText = await response.Content.ReadAsStringAsync();
+                        Console.Clear();
+                        Console.WriteLine("Результат запроса:");
                         int count = 1;
                         while (responseText.Contains(";"))
                         {
