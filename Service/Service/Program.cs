@@ -103,10 +103,51 @@ class Service
                     }
                     continue;
                 case ChooseOption.CodeScan:
-                    Console.WriteLine("Временная заглушка");
+                    {
+                        Console.Clear();
+                        Console.WriteLine("Вставте ссылку на код");
+                        string desc = Console.ReadLine();
+                        StringContent content = new StringContent(desc);
+                        using var response = await httpClient.PostAsync("https://localhost:2702/Scan", content);
+                        string responseText = await response.Content.ReadAsStringAsync();
+                        Console.Clear();
+                        if(responseText.Length==12)
+                            Console.WriteLine("Сканирование начато. Её уникальный номер: " + responseText);
+                        else
+                            Console.WriteLine("Результат: "+responseText);
+                            continue;
+                    }
                     continue;
                 case ChooseOption.GetScanStatus:
-                    Console.WriteLine("Временная заглушка");
+                    Console.Clear();
+                    id = "";
+                    k = 0;
+                    while (k < 3)
+                    {
+                        Console.WriteLine("Какое сканирование вы ищите? Необходимо ввести ее уникальный номер");
+                        id = Console.ReadLine();
+                        if (id.Length == 12)
+                            break;
+                        Console.WriteLine("Индефикатор сканирования имеет строгую длину в 12 символов. Попробуйте еще раз");
+                        k++;
+                    }
+                    if (k < 3)
+                    {
+                        using var response = await httpClient.GetAsync($"https://localhost:2702/ScanStatus/{id}");
+                        string responseText = await response.Content.ReadAsStringAsync();
+                        Console.Clear();
+                        Console.WriteLine("Результат запроса:\n");
+                        int count = 1;
+                        while (responseText.Contains(";"))
+                        {
+                            int pos = responseText.IndexOf(";");
+                            Console.WriteLine(count + ". " + (responseText.Substring(0, pos)));
+                            responseText = responseText.Remove(0, pos + 1);
+                            count++;
+                        }
+                        Console.WriteLine(count + ". " + responseText);
+                        Console.WriteLine("\n");
+                    }
                     continue;
                 default:
                     continue;

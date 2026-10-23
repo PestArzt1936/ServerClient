@@ -4,32 +4,25 @@ namespace ServerApp
 {
     public class Scans
     {
-        private static List<Scans> inProg = new List<Scans>(3);
         public State state;
         string URL;
         string ID;
         DateTime started;
         DateTime end;
+        public DateTime changed;
         public Scans(string id,string URL)
         {
-            state = State.InQueue;
+            state = State.InProgress;
             ID = id;
             this.URL= URL;
             started = DateTime.Now;
-            end = started.AddSeconds(RandomNumberGenerator.GetInt32(59)).AddMinutes(RandomNumberGenerator.GetInt32(5));
-            if (inProg.Count < 3)
-                state = State.InProgress;
+            changed = started;
+            end = started.AddSeconds(RandomNumberGenerator.GetInt32(59)+10).AddMinutes(RandomNumberGenerator.GetInt32(5));
         }
-        static public void refreshScans()
+        public void FinishScan()
         {
-            for(int i=inProg.Count-1;i>=0;i--)
-            {
-                if (inProg[i].end<=DateTime.Now)
-                {
-                    inProg[i].state = State.finished;
-                    inProg.RemoveAt(i);
-                }
-            }
+            state = State.finished;
+            changed = DateTime.Now;
         }
         public string GetID()
         {
@@ -37,7 +30,11 @@ namespace ServerApp
         }
         public int GetDuration()
         {
-            return (end - started).Seconds;
+            return Convert.ToInt32((end - started).TotalSeconds);
+        }
+        public void Changed()
+        {
+            changed = DateTime.Now;
         }
     }
     public enum State
@@ -46,7 +43,7 @@ namespace ServerApp
         error,
         finished,
         InProgress,
-        stopped,
+        Canceled,
         InQueue
     }
 }

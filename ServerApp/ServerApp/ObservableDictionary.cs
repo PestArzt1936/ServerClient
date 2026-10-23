@@ -18,8 +18,12 @@
         }
         public void Add(T key, N value)
         {
-            dict.Add(key, value);
-            ItemAdded?.Invoke(key, value);
+            if (Limit == -1 || dict.Count < Limit) {
+                dict.Add(key, value);
+                ItemAdded?.Invoke(key, value); 
+            }
+            else
+                throw new ArgumentOutOfRangeException("Aboba");
         }
         public void Remove(T key)
         {
